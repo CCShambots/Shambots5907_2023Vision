@@ -2,11 +2,12 @@ import cv2 as cv
 import numpy as np
 import math
 
+
 def drawAxis(img, p_, q_, color, scale):
     p = list(p_)
     q = list(q_)
 
-    ## [visualization1]
+    # [visualization1]
     angle = math.atan2(p[1] - q[1], p[0] - q[0])  # angle in radians
     hypotenuse = math.sqrt((p[1] - q[1]) * (p[1] - q[1]) + (p[0] - q[0]) * (p[0] - q[0]))
 
@@ -23,9 +24,11 @@ def drawAxis(img, p_, q_, color, scale):
     p[0] = q[0] + 9 * math.cos(angle - math.pi / 4)
     p[1] = q[1] + 9 * math.sin(angle - math.pi / 4)
     cv.line(img, (int(p[0]), int(p[1])), (int(q[0]), int(q[1])), color, 3, cv.LINE_AA)
-    ## [visualization1]
+    # [visualization1]
+
+
 def getOrientation(pts, img):
-    ## [pca]
+    # [pca]
     # Construct a buffer used by the pca analysis
     sz = len(pts)
     data_pts = np.empty((sz, 2), dtype=np.float64)
@@ -39,20 +42,22 @@ def getOrientation(pts, img):
 
     # Store the center of the object
     cntr = (int(mean[0, 0]), int(mean[0, 1]))
-    ## [pca]
+    # [pca]
 
-    ## [visualization]
+    # [visualization]
     # Draw the principal components
     cv.circle(img, cntr, 3, (255, 0, 255), 2)
     p1 = (
-    cntr[0] + 0.02 * eigenvectors[0, 0] * eigenvalues[0, 0], cntr[1] + 0.02 * eigenvectors[0, 1] * eigenvalues[0, 0])
+        cntr[0] + 0.02 * eigenvectors[0, 0] * eigenvalues[0, 0],
+        cntr[1] + 0.02 * eigenvectors[0, 1] * eigenvalues[0, 0])
     p2 = (
-    cntr[0] - 0.02 * eigenvectors[1, 0] * eigenvalues[1, 0], cntr[1] - 0.02 * eigenvectors[1, 1] * eigenvalues[1, 0])
+        cntr[0] - 0.02 * eigenvectors[1, 0] * eigenvalues[1, 0],
+        cntr[1] - 0.02 * eigenvectors[1, 1] * eigenvalues[1, 0])
     drawAxis(img, cntr, p1, (255, 255, 0), 1)
     drawAxis(img, cntr, p2, (0, 0, 255), 5)
 
     angle = math.atan2(eigenvectors[0, 1], eigenvectors[0, 0])  # orientation in radians
-    ## [visualization]
+    # [visualization]
 
     # Label with the rotation angle
     label = "  Rotation Angle: " + str(-int(np.rad2deg(angle)) - 90) + " degrees"
@@ -61,45 +66,51 @@ def getOrientation(pts, img):
 
     return angle
 
-cap = cv.VideoCapture("cone.mkv")
 
-if not cap.isOpened():
-    exit
+def runPipeline(image, llrobot):
+    imgHSV = cv.cvtColor(image, cv.COLOR_BGR2HSV)
 
-while cap.isOpened():
-    ret, frame = cap.read()
-    if ret:
-        # cv.imshow('Stream', frame)
+    # convert the hsv to ab inary image by removing pixels
+    # not in the HSV min/max values
+    imgThresh = cv.inRange(imgHSV, (25, 100, 0), (35, 255, 255))
 
-        imgHSV = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
-        imgThresh = cv.inRange(imgHSV, (25, 100, 0), (35, 255, 255))
+    # Taking a matrix of size 5 as the kernel
+    kernel = np.ones((5, 5), np.uint8)
 
-        cv.imshow("treshold", imgThresh)
+    # Erode and dilate
+    cv.erode(imgThresh, kernel, 2)
+    cv.dilate(imgThresh, kernel, 2)
 
-        # Taking a matrix of size 5 as the kernel
-        kernel = np.ones((5, 5), np.uint8)
+    contours, hierarchy = cv.findContours(imgThresh,
+                                          cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
 
-        # Erode and dilate
-        cv.erode(imgThresh, kernel, 2)
-        cv.dilate(imgThresh, kernel, 2)
+    largestContour = np.array([[]])
 
-        contours, hierarchy = cv.findContours(imgThresh, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
+    # initialize empty array to send data to bot
+    llpython = [0]
 
-        frameCopy = frame.copy()
+    # if contours have been detected, draw them
+    if len(contours) > 0:
+        cv.drawContours(image, contours, -1, 255, 2)
 
-        c = max(contours, key=cv.contourArea)
+        largestContour = max(contours, key=cv.contourArea)
 
-        angle = getOrientation(c, frameCopy)
+        angle = getOrientation(largestContour, image)
 
-        cv.imshow('Contours', frameCopy)
+        llpython = [angle]
 
-        # Press Q
-        if cv.waitKey(25) & 0xFF == ord('q'):
-            break
+    cv.imshow('Stream', image)
 
-    else:
-        break
+    return largestContour, image, llpython
 
-cap.release()
 
-cv.destroyAllWindows()
+# cap = cv.VideoCapture("cone.mkv")
+#
+# if not cap.isOpened():
+#     exit
+#
+# while cap.isOpened():
+#     ret, frame = cap.read()
+#     if ret:
+#         # contour, showFrame, data = runPipeline(frame, 0)
+#         cv.imshow('Stream', frame)
