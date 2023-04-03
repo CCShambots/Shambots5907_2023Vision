@@ -32,7 +32,7 @@ def getOrientation(pts, img):
     # Construct a buffer used by the pca analysis
     sz = len(pts)
     data_pts = np.empty((sz, 2), dtype=np.float64)
-    for i in range(data_pts.shape[0]):
+    for i in range(data_pts.shape[0]): 
         data_pts[i, 0] = pts[i, 0, 0]
         data_pts[i, 1] = pts[i, 0, 1]
 
