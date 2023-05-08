@@ -61,7 +61,7 @@ def runPipeline(image, llrobot):
 
 
 # Create a VideoCapture object and read from input file
-cap = cv.VideoCapture('both.mkv')
+cap = cv.VideoCapture('element.mp4')
 
 # Check if camera opened successfully
 if (cap.isOpened() == False):
@@ -75,7 +75,7 @@ while (cap.isOpened()):
     if ret == True:
         # Display the resulting frame
         [c, i, p] = runPipeline(frame, 0)
-        cv.drawContours(frame, [c], -1, 255, 2)
+        # cv.drawContours(frame, [c], -1, 255, 2)
         cv.imshow('Frame', frame)
 
         # Press Q on keyboard to exit
