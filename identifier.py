@@ -2,7 +2,7 @@ import cv2 as cv
 import numpy as np
 
 
-minArea = 1000
+minArea = 100000
 
 def biggestArea(image, threshold):
     # Taking a matrix of size 5 as the kernel
@@ -34,8 +34,8 @@ def runPipeline(image, llrobot):
 
     # convert the hsv to a binary image by removing pixels
     # not in the HSV min/max values
-    coneThresh = cv.inRange(imgHSV, (25, 100, 0), (35, 255, 255))
-    cubeThresh = cv.inRange(imgHSV, (100, 100, 50), (200, 255, 255))
+    coneThresh = cv.inRange(imgHSV, (20, 48, 82), (59, 255, 255))
+    cubeThresh = cv.inRange(imgHSV, (100, 100, 50), (140, 255, 255))
 
     [coneArea, biggestCone] = biggestArea(image, coneThresh)
     [cubeArea, biggestCube] = biggestArea(image, cubeThresh)
@@ -43,52 +43,19 @@ def runPipeline(image, llrobot):
     # print(str(coneArea) + " " + str(cubeArea))
 
     # initialize empty array to send data to bot
-    llpython = ["none"]
+    llpython = [0]
 
     largestContour = np.array([[]])
 
     if coneArea > cubeArea and coneArea > minArea:
-        llpython[0] = "cone"
+        llpython[0] = 1
         largestContour = biggestCone
     elif cubeArea > coneArea and cubeArea > minArea:
-        llpython[0] = "cube"
+        llpython[0] = 2
         largestContour = biggestCube
 
-    # cv.imshow('Stream', image)
-    cv.putText(image, llpython[0], (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv.LINE_AA)
+    # print(str(cubeArea) + " " + str(coneArea))
+
+    cv.putText(image, str(llpython[0]), (200, 200), cv.FONT_HERSHEY_SIMPLEX, 6, (0, 0, 255), 10, cv.LINE_AA)
 
     return largestContour, image, llpython
-
-
-# Create a VideoCapture object and read from input file
-cap = cv.VideoCapture('element.mp4')
-
-# Check if camera opened successfully
-if (cap.isOpened() == False):
-    print("Error opening video file")
-
-# Read until video is completed
-while (cap.isOpened()):
-
-    # Capture frame-by-frame
-    ret, frame = cap.read()
-    if ret == True:
-        # Display the resulting frame
-        [c, i, p] = runPipeline(frame, 0)
-        # cv.drawContours(frame, [c], -1, 255, 2)
-        cv.imshow('Frame', frame)
-
-        # Press Q on keyboard to exit
-        if cv.waitKey(25) & 0xFF == ord('q'):
-            break
-
-    # Break the loop
-    else:
-        break
-
-# When everything done, release
-# the video capture object
-cap.release()
-
-# Closes all the frames
-cv.destroyAllWindows()
